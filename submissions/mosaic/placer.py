@@ -7,14 +7,6 @@ Team members: Arnav Patil
 Optimizes a smooth surrogate of the challenge proxy cost:
     PC = (1.0 * WL) + (0.5 * Cong) + (0.5 * Dens)
 
-The surrogate mirrors the TILOS evaluator closely enough to optimize with
-gradient descent:
-1. Wirelength uses soft-HPWL over each evaluator net.
-2. Density uses exact macro/grid overlap areas with a smooth upper-tail average.
-3. Congestion uses a differentiable routing-demand rasterization on the evaluator
-   grid plus macro blockage demand and smoothing.
-4. A final greedy legalizer removes any remaining hard-macro overlaps.
-
 This version only optimizes hard macros. Soft macros stay at their initial
 positions and still contribute fixed density / congestion context.
 
@@ -188,7 +180,7 @@ def _count_hard_overlaps(hard_positions: torch.Tensor, benchmark: Benchmark) -> 
     return overlaps
 
 
-class DiffProxyPlacer:
+class MOSAICPlacer:
     def __init__(
         self,
         seed: int = 7,
@@ -264,15 +256,21 @@ class DiffProxyPlacer:
 
         full_positions = benchmark.macro_positions.clone()
         full_positions[:num_hard] = best_hard.to(dtype=benchmark.macro_positions.dtype)
+
         return full_positions
 
     def _pick_best_candidate(self, candidates, benchmark: Benchmark, plc):
+        """
+        Evaluates multiple candidate placements using the exact evaluator and returns the best.
+        Heavily penalizes any overlaps so that legal placements always win over invalid ones.
+        """
         num_hard = benchmark.num_hard_macros
         best_score = float("inf")
         best_hard = candidates[0]
 
         seen = set()
         for hard_pos in candidates:
+
             # Rounded hashing avoids rescoring duplicates created when the
             # optimizer or legalizer returns the same placement.
             key = tuple(torch.round(hard_pos.flatten(), decimals=4).tolist())
@@ -282,10 +280,12 @@ class DiffProxyPlacer:
 
             full = benchmark.macro_positions.clone()
             full[:num_hard] = hard_pos.to(dtype=full.dtype)
+
             # Overlaps are penalized heavily so exact legal placements always
             # win over slightly lower-cost but invalid ones.
             proxy, overlaps = _exact_proxy_cost(plc, full, benchmark)
             score = proxy if overlaps == 0 else proxy + 1000.0 * overlaps
+
             if score < best_score:
                 best_score = score
                 best_hard = hard_pos
@@ -293,7 +293,13 @@ class DiffProxyPlacer:
         return best_hard
 
     def _build_objective_data(self, benchmark: Benchmark, plc, movable_mask: torch.Tensor):
-        device = torch.device("cpu")
+        """
+        One-time preprocessor for evaluator data at the start of optimization. Constructs routing
+        grid geometry, net connectivivy, and pin ownership. Filters to only active nets where at least
+        one pin can move.
+        Returns a dictionary of tensors used during optimization to evaluate the surrogate cost.
+        """
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         num_hard = benchmark.num_hard_macros
 
         # Map evaluator macro names back to benchmark hard-macro indices so we
@@ -312,8 +318,10 @@ class DiffProxyPlacer:
 
         grid_rows = int(benchmark.grid_rows)
         grid_cols = int(benchmark.grid_cols)
+
         canvas_w = float(benchmark.canvas_width)
         canvas_h = float(benchmark.canvas_height)
+
         grid_w = canvas_w / grid_cols
         grid_h = canvas_h / grid_rows
 
@@ -344,11 +352,13 @@ class DiffProxyPlacer:
         src_offset_y = []
         src_fixed_x = []
         src_fixed_y = []
+
         sink_owner = []
         sink_offset_x = []
         sink_offset_y = []
         sink_fixed_x = []
         sink_fixed_y = []
+
         conn_weights = []
 
         active_net_id = 0
@@ -460,6 +470,12 @@ class DiffProxyPlacer:
         }
 
     def _pin_spec(self, pin_name: str, plc, hard_name_to_idx: dict[str, int]):
+        """
+        Converts an evaluator pin name into a differentiable representation.
+        PORT and non-optimized pins are encoded as fixed absolute coordinates, while
+        pins owned by hard macros are stored as an owner index + offset.
+        """
+
         # Convert a PlacementCost pin name into a compact differentiable
         # representation. Hard-macro pins are stored as (owner, offset); every
         # other pin is reduced to a fixed point in absolute coordinates.
@@ -502,15 +518,12 @@ class DiffProxyPlacer:
             "fixed_y": float(py + offset_y),
         }
 
-    def _fixed_macro_overlap_area(
-        self,
-        positions: torch.Tensor,
-        sizes: torch.Tensor,
-        cell_xmin: torch.Tensor,
-        cell_xmax: torch.Tensor,
-        cell_ymin: torch.Tensor,
-        cell_ymax: torch.Tensor,
-    ) -> torch.Tensor:
+    def _fixed_macro_overlap_area(self, positions: torch.Tensor, sizes: torch.Tensor, cell_xmin: torch.Tensor,
+                                  cell_xmax: torch.Tensor, cell_ymin: torch.Tensor, cell_ymax: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the exact continuous overlap between fixed macros and every grid routing cell. 
+        Returns a tensor of per-cell accumulated overlap areas for density and congestion calculations.
+        """
         if positions.numel() == 0:
             return torch.zeros_like(cell_xmin)
 
@@ -519,20 +532,19 @@ class DiffProxyPlacer:
         # no further smoothing is needed.
         x_min = positions[:, 0:1] - sizes[:, 0:1] / 2
         x_max = positions[:, 0:1] + sizes[:, 0:1] / 2
+
         y_min = positions[:, 1:2] - sizes[:, 1:2] / 2
         y_max = positions[:, 1:2] + sizes[:, 1:2] / 2
 
         overlap_x = torch.relu(torch.minimum(x_max, cell_xmax.unsqueeze(0)) - torch.maximum(x_min, cell_xmin.unsqueeze(0)))
         overlap_y = torch.relu(torch.minimum(y_max, cell_ymax.unsqueeze(0)) - torch.maximum(y_min, cell_ymin.unsqueeze(0)))
+        
         return (overlap_x * overlap_y).sum(dim=0)
 
-    def _optimize_hard_macros(
-        self,
-        benchmark: Benchmark,
-        hard_start: torch.Tensor,
-        movable_mask: torch.Tensor,
-        objective: dict,
-    ) -> torch.Tensor:
+    def _optimize_hard_macros( # TODO documentation
+        self, benchmark: Benchmark, hard_start: torch.Tensor,
+        movable_mask: torch.Tensor, objective: dict) -> torch.Tensor:
+
         num_hard = benchmark.num_hard_macros
         sizes = benchmark.macro_sizes[:num_hard].detach().cpu().to(torch.float32)
 
@@ -600,15 +612,14 @@ class DiffProxyPlacer:
 
         return best_param
 
-    def _resolve_pin_coordinates(
-        self,
-        hard_pos: torch.Tensor,
-        owner: torch.Tensor,
-        offset_x: torch.Tensor,
-        offset_y: torch.Tensor,
-        fixed_x: torch.Tensor,
-        fixed_y: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def _resolve_pin_coordinates(self, hard_pos: torch.Tensor, owner: torch.Tensor, offset_x: torch.Tensor,
+                                 offset_y: torch.Tensor, fixed_x: torch.Tensor, fixed_y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        
+        """
+        Resolves pin positions by checking ownership: if a pin owns a hard macro, it computes the dynamic
+        coordinate by adding the pin's offset to the macro's centre. Else, it returns the fixed aboslute
+        coordinate for that pin.
+        """
         if owner.numel() == 0:
             empty = torch.zeros(0, dtype=torch.float32)
             return empty, empty
@@ -618,26 +629,41 @@ class DiffProxyPlacer:
         owner_safe = owner.clamp(min=0)
         dyn_x = hard_pos[owner_safe, 0] + offset_x
         dyn_y = hard_pos[owner_safe, 1] + offset_y
+
         is_dyn = owner >= 0
+
         x = torch.where(is_dyn, dyn_x, fixed_x)
         y = torch.where(is_dyn, dyn_y, fixed_y)
+
         return x, y
 
     def _segment_logsumexp(self, values: torch.Tensor, seg_ids: torch.Tensor, num_seg: int, tau: float) -> torch.Tensor:
+        """
+        Computes a batched soft maximum over segments, using log-sum-exponent for stability.
+        Returns a differentiable approximation of per-segment maxima.
+        """
+
         if values.numel() == 0 or num_seg == 0:
             return torch.zeros(num_seg, dtype=torch.float32)
 
         # Batched soft-max over ragged nets. This is the core primitive behind
-        # soft-HPWL: logsumexp approximates max, and -logsumexp(-x) approximates
-        # min, with temperature tau controlling sharpness.
+        # soft-HPWL: logsumexp approximates max, and -logsumexp(-x) approximates min.
         scaled = values / tau
+
         max_scaled = torch.full((num_seg,), -1e9, dtype=values.dtype, device=values.device)
         max_scaled.scatter_reduce_(0, seg_ids, scaled, reduce="amax", include_self=True)
+
         exp_sum = torch.zeros(num_seg, dtype=values.dtype, device=values.device)
         exp_sum.index_add_(0, seg_ids, torch.exp(scaled - max_scaled[seg_ids]))
+
         return tau * (max_scaled + torch.log(exp_sum.clamp_min(1e-12)))
 
     def _wirelength_cost(self, hard_pos: torch.Tensor, objective: dict) -> torch.Tensor:
+        """
+        Computes a smooth, differentiable value for the wirelegth proxy cost using log-sum-exponents
+        instead of max/min to approximate the bounding box of each net's pins.
+        """
+
         # Resolve every active net pin to its current continuous coordinate.
         pin_x, pin_y = self._resolve_pin_coordinates(
             hard_pos,
@@ -655,17 +681,26 @@ class DiffProxyPlacer:
         #   softmax(x) - softmin(x) + softmax(y) - softmin(y)
         # per net, weighted exactly like the evaluator nets.
         tau = self.wire_tau
+
         x_max = self._segment_logsumexp(pin_x, objective["pin_net_ids"], objective["num_active_nets"], tau)
         x_min = -self._segment_logsumexp(-pin_x, objective["pin_net_ids"], objective["num_active_nets"], tau)
+
         y_max = self._segment_logsumexp(pin_y, objective["pin_net_ids"], objective["num_active_nets"], tau)
         y_min = -self._segment_logsumexp(-pin_y, objective["pin_net_ids"], objective["num_active_nets"], tau)
 
         hpwl = objective["net_weights"] * ((x_max - x_min) + (y_max - y_min))
+
         # Match the evaluator's normalization by canvas perimeter and net count.
         norm = (objective["grid_w"] * objective["grid_cols"] + objective["grid_h"] * objective["grid_rows"]) * objective["plc_net_count"]
+
         return hpwl.sum() / max(norm, 1e-6)
 
     def _tail_average(self, values: torch.Tensor, ratio: float, tail_var: torch.nn.Parameter) -> torch.Tensor:
+        """
+        Computes a smooth approximation of the average of top values using a learnable threshold.
+        Result is differentiable and behaves like a top k-tail instead of a hard selection.
+        """
+
         if values.numel() == 0:
             return torch.tensor(0.0, dtype=torch.float32)
 
@@ -673,10 +708,16 @@ class DiffProxyPlacer:
         #   t + sum(softplus(v - t)) / k
         # where t is a learnable threshold and k is the nominal tail size.
         k = max(1, int(math.floor(values.numel() * ratio)))
+
         return tail_var + F.softplus(values - tail_var, beta=self.tail_beta).sum() / float(k)
 
     def _density_cost(self, hard_pos: torch.Tensor, objective: dict, tail_var: torch.nn.Parameter) -> torch.Tensor:
+        """
+        Computes a scalar density surrogate used during optimization, mimics the evaluator's top-10% density cost.
+        """
+
         sizes = objective["hard_sizes"]
+
         # Compute exact overlap area between every hard macro and every routing
         # cell, then convert that area to per-cell density.
         x_min = hard_pos[:, 0:1] - sizes[:, 0:1] / 2
@@ -689,10 +730,15 @@ class DiffProxyPlacer:
         hard_area = (overlap_x * overlap_y).sum(dim=0)
 
         density = (hard_area + objective["fixed_density_area"]) / objective["grid_area"]
+
         # The evaluator returns 0.5 * average(top 10%), so we mimic that here.
         return 0.5 * self._tail_average(density, 0.10, tail_var)
 
     def _smooth_route_map(self, route_map: torch.Tensor, smooth_range: int, axis: int) -> torch.Tensor:
+        """
+        Replaces each point with the local average over a neighbourhood of a given width along the chosen axis.
+        """
+
         if smooth_range <= 0:
             return route_map
 
@@ -711,6 +757,11 @@ class DiffProxyPlacer:
         return smoothed if axis == 1 else smoothed.transpose(0, 1)
 
     def _congestion_cost(self, hard_pos: torch.Tensor, objective: dict, tail_var: torch.nn.Parameter) -> torch.Tensor:
+        """
+        Computes a smooth differentiable congestion cost inspired by the evaluator's 
+        discrete model using continuous pin coordinates and interval coverage instead.
+        """
+
         # Build smooth source/sink coordinates for every active two-pin pair.
         src_x, src_y = self._resolve_pin_coordinates(
             hard_pos,
@@ -788,19 +839,30 @@ class DiffProxyPlacer:
         h_smooth = self._smooth_route_map(h_norm, objective["smooth_range"], axis=0)
 
         congestion = torch.cat([(v_smooth + v_macro).flatten(), (h_smooth + h_macro).flatten()])
+
         return self._tail_average(congestion, 0.05, tail_var)
 
     def _normalized_gaussian(self, values: torch.Tensor, centers: torch.Tensor, sigma: float) -> torch.Tensor:
-        # Normalized Gaussian stencil used to softly assign a continuous point
-        # to nearby rows/cols on the evaluator grid.
+        """
+        Computes normalized Gaussian weights for each value-centre pair, weight 
+        decays with distance and is controlled by sigma. The output is normalized 
+        so that the weights for each value sum to 1 across all centers.
+        """
+
         weights = torch.exp(-0.5 * ((values - centers) / max(sigma, 1e-6)) ** 2)
+        
         return weights / weights.sum(dim=1, keepdim=True).clamp_min(1e-9)
 
     def _overlap_penalty(self, hard_pos: torch.Tensor, sizes: torch.Tensor, movable_mask: torch.Tensor) -> torch.Tensor:
-        # Smooth overlap penalty used only during optimization. The final
-        # legality guarantee still comes from the discrete legalizer below.
+        """
+        Calculates a differentiable penalty based on the total pairwise overlap area between hard macros, 
+        weighted by the optimizer's current focus on resolving collisions. Only pairs involving at least
+        one movable macro contribute to the penalty.
+        """
+
         dx = hard_pos[:, 0].unsqueeze(1) - hard_pos[:, 0].unsqueeze(0)
         dy = hard_pos[:, 1].unsqueeze(1) - hard_pos[:, 1].unsqueeze(0)
+
         abs_dx = torch.sqrt(dx * dx + 1e-8)
         abs_dy = torch.sqrt(dy * dy + 1e-8)
 
@@ -809,24 +871,22 @@ class DiffProxyPlacer:
 
         overlap_x = torch.relu(sep_x - abs_dx)
         overlap_y = torch.relu(sep_y - abs_dy)
+
         pair_overlap = overlap_x * overlap_y
 
         active = movable_mask.unsqueeze(1) | movable_mask.unsqueeze(0)
         tri = torch.triu(torch.ones_like(pair_overlap, dtype=torch.bool), diagonal=1)
+
         return pair_overlap[active & tri].sum() / max(int(hard_pos.shape[0]), 1)
 
-    def _legalize(
-        self,
-        positions: np.ndarray,
-        movable: np.ndarray,
-        sizes: np.ndarray,
-        canvas_w: float,
-        canvas_h: float,
-    ) -> np.ndarray:
-        # Greedy nearest-feasible legalizer:
-        #   1. place larger macros first,
-        #   2. keep already-legal positions when possible,
-        #   3. otherwise search outward on an expanding square ring.
+    def _legalize(self, positions: np.ndarray, movable: np.ndarray,
+                  sizes: np.ndarray, canvas_w: float, canvas_h: float) -> np.ndarray:
+        """
+        Greedy nearest-feasible legalizer to resolve any remaining overlaps after optimization. 
+        Places larger macros first, keeping already-legal positions when possible, and otherwise 
+        searching outward on an expanding square ring.
+        """
+
         num_hard = positions.shape[0]
         half_w = sizes[:, 0] / 2
         half_h = sizes[:, 1] / 2
