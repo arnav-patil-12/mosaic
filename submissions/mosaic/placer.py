@@ -42,8 +42,6 @@ NG45_DIRS = {
 
 
 def _candidate_external_roots() -> list[Path]:
-    # Allow an explicit override first so local experiments can point at a
-    # different MacroPlacement checkout without touching code.
     roots: list[Path] = []
 
     env_root = os.environ.get("MACROPLACE_EXTERNAL_ROOT")
@@ -55,33 +53,32 @@ def _candidate_external_roots() -> list[Path]:
 
 
 def _load_placement_cost_class(external_root: Path):
-    # PlacementCost lives in the external TILOS checkout, so we import it
-    # lazily and only when we actually need exact evaluator data.
     plc_dir = external_root / "CodeElements" / "Plc_client"
     if str(plc_dir) not in sys.path:
         sys.path.insert(0, str(plc_dir))
 
-    from plc_client_os import PlacementCost  # type: ignore
+    from plc_client_os import PlacementCost
 
     return PlacementCost
 
 
 def _load_plc(benchmark_name: str):
-    # Search a few plausible MacroPlacement roots and reconstruct the original
-    # evaluator object for this benchmark. The submission still works without
-    # it, but then it falls back to legalization only.
     for external_root in _candidate_external_roots():
         testcase_root = external_root / "Testcases" / "ICCAD04" / benchmark_name
+        
         if testcase_root.exists():
             netlist = testcase_root / "netlist.pb.txt"
             plc_file = testcase_root / "initial.plc"
             PlacementCost = _load_placement_cost_class(external_root)
             plc = PlacementCost(str(netlist))
+            
             if plc_file.exists():
                 plc.restore_placement(str(plc_file), ifInital=True, ifReadComment=True)
+                
             return plc
 
         ng45_rel = NG45_DIRS.get(benchmark_name)
+        
         if ng45_rel:
             ng45_root = external_root / ng45_rel
             netlist = ng45_root / "netlist.pb.txt"
@@ -89,17 +86,18 @@ def _load_plc(benchmark_name: str):
             if netlist.exists():
                 PlacementCost = _load_placement_cost_class(external_root)
                 plc = PlacementCost(str(netlist))
+                
                 if plc_file.exists():
                     plc.restore_placement(str(plc_file), ifInital=True, ifReadComment=True)
+                    
                 return plc
 
     return None
 
 
 def _ensure_congestion_arrays(plc) -> None:
-    # Some evaluator instances carry stale array sizes after placement reloads.
-    # Keep these aligned with the active grid before exact scoring.
     expected_size = plc.grid_col * plc.grid_row
+    
     if len(plc.H_routing_cong) != expected_size:
         plc.V_routing_cong = [0] * expected_size
         plc.H_routing_cong = [0] * expected_size
@@ -108,30 +106,34 @@ def _ensure_congestion_arrays(plc) -> None:
 
 
 def _set_plc_placement(plc, placement: torch.Tensor, benchmark: Benchmark) -> None:
-    # Copy our tensor placement into the evaluator object so the exact proxy
-    # can be recomputed on candidate solutions.
     placement_np = placement.detach().cpu().numpy()
 
     if not hasattr(plc, "_macro_pin_map"):
         pin_map = {}
+        
         for idx, mod in enumerate(plc.modules_w_pins):
+            
             if mod.get_type() == "MACRO_PIN" and hasattr(mod, "get_macro_name"):
                 pin_map.setdefault(mod.get_macro_name(), []).append(idx)
+                
         plc._macro_pin_map = pin_map
 
     for i, macro_idx in enumerate(benchmark.hard_macro_indices):
         node = plc.modules_w_pins[macro_idx]
         x, y = placement_np[i]
         node.set_pos(x, y)
+        
         for pin_idx in plc._macro_pin_map.get(node.get_name(), []):
             pin = plc.modules_w_pins[pin_idx]
             pin.set_pos(x + pin.x_offset, y + pin.y_offset)
 
     num_hard = benchmark.num_hard_macros
+    
     for i, macro_idx in enumerate(benchmark.soft_macro_indices):
         node = plc.modules_w_pins[macro_idx]
         x, y = placement_np[num_hard + i]
         node.set_pos(x, y)
+        
         for pin_idx in plc._macro_pin_map.get(node.get_name(), []):
             pin = plc.modules_w_pins[pin_idx]
             pin.set_pos(x + pin.x_offset, y + pin.y_offset)
@@ -154,12 +156,11 @@ def _exact_proxy_cost(plc, placement: torch.Tensor, benchmark: Benchmark) -> tup
         + PROXY_WEIGHTS["congestion"] * congestion
     )
     overlaps = _count_hard_overlaps(placement[: benchmark.num_hard_macros], benchmark)
+    
     return proxy, overlaps
 
 
 def _count_hard_overlaps(hard_positions: torch.Tensor, benchmark: Benchmark) -> int:
-    # Count hard-macro overlaps exactly using closed bounding boxes. This is
-    # used for candidate selection after optimization/legalization.
     num_hard = benchmark.num_hard_macros
     sizes = benchmark.macro_sizes[:num_hard]
     x_min = hard_positions[:, 0] - sizes[:, 0] / 2
@@ -170,28 +171,17 @@ def _count_hard_overlaps(hard_positions: torch.Tensor, benchmark: Benchmark) -> 
     overlaps = 0
     for i in range(num_hard):
         for j in range(i + 1, num_hard):
-            if not (
-                x_min[i] >= x_max[j]
-                or x_max[i] <= x_min[j]
-                or y_min[i] >= y_max[j]
-                or y_max[i] <= y_min[j]
-            ):
+            if not (x_min[i] >= x_max[j] or x_max[i] <= x_min[j] or 
+                    y_min[i] >= y_max[j] or y_max[i] <= y_min[j]):
                 overlaps += 1
+                
     return overlaps
 
 
 class MOSAICPlacer:
-    def __init__(
-        self,
-        seed: int = 7,
-        iterations: int = 40,
-        learning_rate: float = 0.06,
-        wire_tau: float = 0.15,
-        route_sigma_scale: float = 0.85,
-        interval_tau_scale: float = 0.60,
-        tail_beta: float = 18.0,
-        overlap_weight: float = 6.0,
-    ):
+    def __init__(self, seed: int = 7, iterations: int = 40, learning_rate: float = 0.06,
+                 wire_tau: float = 0.15, route_sigma_scale: float = 0.85, interval_tau_scale: float = 0.60,
+                 tail_beta: float = 18.0, overlap_weight: float = 6.0):
         self.seed = seed
         self.iterations = iterations
         self.learning_rate = learning_rate
@@ -216,14 +206,15 @@ class MOSAICPlacer:
 
         # Start from a legal hard-macro placement so the optimizer begins in a
         # sensible region and we always have a valid fallback candidate.
-        legalized_init = self._legalize(
-            hard_init.copy(),
-            movable_mask.detach().cpu().numpy(),
-            hard_sizes_np,
-            float(benchmark.canvas_width),
-            float(benchmark.canvas_height),
-        )
-        hard_start = torch.tensor(legalized_init, dtype=torch.float32)
+        # legalized_init = self._legalize(
+        #     hard_init.copy(),
+        #     movable_mask.detach().cpu().numpy(),
+        #     hard_sizes_np,
+        #     float(benchmark.canvas_width),
+        #     float(benchmark.canvas_height),
+        # )
+        # hard_start = torch.tensor(legalized_init, dtype=torch.float32)
+        hard_start = torch.tensor(hard_init, dtype=torch.float32)
 
         plc = _load_plc(benchmark.name)
         if plc is None:
@@ -731,8 +722,9 @@ class MOSAICPlacer:
 
         density = (hard_area + objective["fixed_density_area"]) / objective["grid_area"]
 
-        # The evaluator returns 0.5 * average(top 10%), so we mimic that here.
-        return 0.5 * self._tail_average(density, 0.10, tail_var)
+        # The evaluator returns 0.5 * average(top 10%), but we ignore here for tighter optimization.
+        # Let's compare results with a lower (0.05) and higher (0.20) tail average
+        return self._tail_average(density, 0.05, tail_var)
 
     def _smooth_route_map(self, route_map: torch.Tensor, smooth_range: int, axis: int) -> torch.Tensor:
         """
@@ -840,7 +832,8 @@ class MOSAICPlacer:
 
         congestion = torch.cat([(v_smooth + v_macro).flatten(), (h_smooth + h_macro).flatten()])
 
-        return self._tail_average(congestion, 0.05, tail_var)
+        # return self._tail_average(congestion, 0.05, tail_var)
+        return self._tail_average(congestion, 0.2, tail_var)
 
     def _normalized_gaussian(self, values: torch.Tensor, centers: torch.Tensor, sigma: float) -> torch.Tensor:
         """
