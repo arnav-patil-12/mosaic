@@ -1,14 +1,13 @@
 """
-Multi-Objective Smooth Analytical Integrated Circuit Placment (MOSAIC Placement)
+Multi-Objective Smooth AnalytICal Placer (MOSAIC Placer)
 
-Team members: Arnav Patil
+Team Members: Arnav Patil
               Alexandre Singer
 
 Optimizes a smooth surrogate of the challenge proxy cost:
     PC = (1.0 * WL) + (0.5 * Cong) + (0.5 * Dens)
 
-This version only optimizes hard macros. Soft macros stay at their initial
-positions and still contribute fixed density / congestion context.
+This version optimizes hard and soft macros.
 
 Usage:
     uv run evaluate submissions/mosaic/placer.py
@@ -27,12 +26,14 @@ import torch.nn.functional as F
 
 from macro_place.benchmark import Benchmark
 
+# Define proxy weights for the optimization objectives
 PROXY_WEIGHTS = {
-    "wirelength": 1.0,
-    "congestion": 0.5,
-    "density": 0.5,
+    "wirelength": 1.0,  # Weight for wirelength cost
+    "congestion": 0.5,  # Weight for congestion cost
+    "density": 0.5,  # Weight for density cost
 }
 
+# Define directories for NanGate45 benchmarks
 NG45_DIRS = {
     "ariane133": "Flows/NanGate45/ariane133/netlist/output_CT_Grouping",
     "ariane136": "Flows/NanGate45/ariane136/netlist/output_CT_Grouping",
@@ -40,18 +41,20 @@ NG45_DIRS = {
     "nvdla": "Flows/NanGate45/nvdla/netlist/output_CT_Grouping",
 }
 
-
+# Function to determine candidate external roots for placement cost evaluation
 def _candidate_external_roots() -> list[Path]:
     roots: list[Path] = []
 
+    # Check if an environment variable is set for external root
     env_root = os.environ.get("MACROPLACE_EXTERNAL_ROOT")
     if env_root:
         roots.append(Path(env_root))
 
+    # Default to the MacroPlacement directory
     roots.append(Path("external/MacroPlacement"))
     return roots
 
-
+# Function to load the PlacementCost class from the external root
 def _load_placement_cost_class(external_root: Path):
     plc_dir = external_root / "CodeElements" / "Plc_client"
     if str(plc_dir) not in sys.path:
@@ -61,7 +64,7 @@ def _load_placement_cost_class(external_root: Path):
 
     return PlacementCost
 
-
+# Function to load placement cost data for a given benchmark
 def _load_plc(benchmark_name: str):
     for external_root in _candidate_external_roots():
         testcase_root = external_root / "Testcases" / "ICCAD04" / benchmark_name
@@ -94,72 +97,75 @@ def _load_plc(benchmark_name: str):
 
     return None
 
-
+# Ensure congestion arrays are initialized properly
 def _ensure_congestion_arrays(plc) -> None:
     expected_size = plc.grid_col * plc.grid_row
-    
+
     if len(plc.H_routing_cong) != expected_size:
         plc.V_routing_cong = [0] * expected_size
         plc.H_routing_cong = [0] * expected_size
         plc.V_macro_routing_cong = [0] * expected_size
         plc.H_macro_routing_cong = [0] * expected_size
 
-
+# Set placement positions in the PlacementCost object
 def _set_plc_placement(plc, placement: torch.Tensor, benchmark: Benchmark) -> None:
     placement_np = placement.detach().cpu().numpy()
 
     if not hasattr(plc, "_macro_pin_map"):
         pin_map = {}
-        
+
+        # Map macro pins to their indices
         for idx, mod in enumerate(plc.modules_w_pins):
-            
             if mod.get_type() == "MACRO_PIN" and hasattr(mod, "get_macro_name"):
                 pin_map.setdefault(mod.get_macro_name(), []).append(idx)
                 
         plc._macro_pin_map = pin_map
 
+    # Set positions for hard macros
     for i, macro_idx in enumerate(benchmark.hard_macro_indices):
         node = plc.modules_w_pins[macro_idx]
         x, y = placement_np[i]
         node.set_pos(x, y)
-        
+
         for pin_idx in plc._macro_pin_map.get(node.get_name(), []):
             pin = plc.modules_w_pins[pin_idx]
             pin.set_pos(x + pin.x_offset, y + pin.y_offset)
 
+    # Set positions for soft macros
     num_hard = benchmark.num_hard_macros
-    
     for i, macro_idx in enumerate(benchmark.soft_macro_indices):
         node = plc.modules_w_pins[macro_idx]
         x, y = placement_np[num_hard + i]
         node.set_pos(x, y)
-        
+
         for pin_idx in plc._macro_pin_map.get(node.get_name(), []):
             pin = plc.modules_w_pins[pin_idx]
             pin.set_pos(x + pin.x_offset, y + pin.y_offset)
 
+    # Update flags to recalculate costs
     _ensure_congestion_arrays(plc)
     plc.FLAG_UPDATE_WIRELENGTH = True
     plc.FLAG_UPDATE_DENSITY = True
     plc.FLAG_UPDATE_CONGESTION = True
 
-
+# Compute the exact proxy cost using the true evaluator
 def _exact_proxy_cost(plc, placement: torch.Tensor, benchmark: Benchmark) -> tuple[float, int]:
-    # This uses the true evaluator, not the differentiable surrogate.
-    _set_plc_placement(plc, placement, benchmark)
-    wire = float(plc.get_cost())
-    density = float(plc.get_density_cost())
-    congestion = float(plc.get_congestion_cost())
+    _set_plc_placement(plc, placement, benchmark)  # Set placement in the evaluator
+    wire = float(plc.get_cost())  # Compute wirelength cost
+    density = float(plc.get_density_cost())  # Compute density cost
+    congestion = float(plc.get_congestion_cost())  # Compute congestion cost
+
+    # Combine costs using proxy weights
     proxy = (
         PROXY_WEIGHTS["wirelength"] * wire
         + PROXY_WEIGHTS["density"] * density
         + PROXY_WEIGHTS["congestion"] * congestion
     )
-    overlaps = _count_hard_overlaps(placement[: benchmark.num_hard_macros], benchmark)
-    
+    overlaps = _count_hard_overlaps(placement[: benchmark.num_hard_macros], benchmark)  # Count overlaps
+
     return proxy, overlaps
 
-
+# Count overlaps between hard macros
 def _count_hard_overlaps(hard_positions: torch.Tensor, benchmark: Benchmark) -> int:
     num_hard = benchmark.num_hard_macros
     sizes = benchmark.macro_sizes[:num_hard]
@@ -171,17 +177,19 @@ def _count_hard_overlaps(hard_positions: torch.Tensor, benchmark: Benchmark) -> 
     overlaps = 0
     for i in range(num_hard):
         for j in range(i + 1, num_hard):
+            # Check for overlap between macro i and macro j
             if not (x_min[i] >= x_max[j] or x_max[i] <= x_min[j] or 
                     y_min[i] >= y_max[j] or y_max[i] <= y_min[j]):
                 overlaps += 1
                 
     return overlaps
 
-
+# Class implementing the MOSAIC placer
 class MOSAICPlacer:
     def __init__(self, seed: int = 7, iterations: int = 40, learning_rate: float = 0.06,
-                 wire_tau: float = 0.15, route_sigma_scale: float = 0.85, interval_tau_scale: float = 0.60,
-                 tail_beta: float = 18.0, overlap_weight: float = 6.0):
+                wire_tau: float = 0.15, route_sigma_scale: float = 0.85, interval_tau_scale: float = 0.60,
+                tail_beta: float = 18.0, overlap_weight: float = 6.0,
+                soft_iterations: int = 60, soft_learning_rate: float = 0.035):
         self.seed = seed
         self.iterations = iterations
         self.learning_rate = learning_rate
@@ -190,6 +198,8 @@ class MOSAICPlacer:
         self.interval_tau_scale = interval_tau_scale
         self.tail_beta = tail_beta
         self.overlap_weight = overlap_weight
+        self.soft_iterations = soft_iterations
+        self.soft_learning_rate = soft_learning_rate
 
     def place(self, benchmark: Benchmark) -> torch.Tensor:
         torch.manual_seed(self.seed)
@@ -200,35 +210,24 @@ class MOSAICPlacer:
         if num_hard == 0:
             return benchmark.macro_positions.clone()
 
+        # Initialize hard macro positions
         movable_mask = (~benchmark.macro_fixed[:num_hard]).clone()
         hard_init = benchmark.macro_positions[:num_hard].detach().cpu().numpy().astype(np.float64)
         hard_sizes_np = benchmark.macro_sizes[:num_hard].detach().cpu().numpy().astype(np.float64)
-
-        # Start from a legal hard-macro placement so the optimizer begins in a
-        # sensible region and we always have a valid fallback candidate.
-        # legalized_init = self._legalize(
-        #     hard_init.copy(),
-        #     movable_mask.detach().cpu().numpy(),
-        #     hard_sizes_np,
-        #     float(benchmark.canvas_width),
-        #     float(benchmark.canvas_height),
-        # )
-        # hard_start = torch.tensor(legalized_init, dtype=torch.float32)
         hard_start = torch.tensor(hard_init, dtype=torch.float32)
 
+        # Load placement cost evaluator
         plc = _load_plc(benchmark.name)
         if plc is None:
             full_positions = benchmark.macro_positions.clone()
             full_positions[:num_hard] = hard_start
             return full_positions
 
-        # Precompute all evaluator-derived tensors once: net structure,
-        # pin ownership, grid geometry, capacities, and fixed soft-macro area.
+        # Precompute evaluator data for optimization
         objective = self._build_objective_data(benchmark, plc, movable_mask)
         refined_hard = self._optimize_hard_macros(benchmark, hard_start, movable_mask, objective)
 
-        # Re-legalize after gradient optimization to snap away any residual
-        # overlap that the smooth penalty did not fully eliminate.
+        # Legalize placement after optimization
         legalized_refined = torch.tensor(
             self._legalize(
                 refined_hard.detach().cpu().numpy().astype(np.float64),
@@ -240,15 +239,43 @@ class MOSAICPlacer:
             dtype=torch.float32,
         )
 
-        # Compare the exact evaluator scores on a few natural checkpoints and
-        # keep the best legal result.
+        # Compare and select the best placement
         candidates = [hard_start, refined_hard.detach().cpu(), legalized_refined]
         best_hard = self._pick_best_candidate(candidates, benchmark, plc)
 
-        full_positions = benchmark.macro_positions.clone()
-        full_positions[:num_hard] = best_hard.to(dtype=benchmark.macro_positions.dtype)
+        if benchmark.num_soft_macros == 0:
+            full_positions = benchmark.macro_positions.clone()
+            full_positions[:num_hard] = best_hard.to(dtype=benchmark.macro_positions.dtype)
+            return full_positions
+
+        # Optimize soft macro positions
+        soft_start = benchmark.macro_positions[num_hard:].detach().cpu().to(torch.float32)
+        soft_movable_mask = (~benchmark.macro_fixed[num_hard:]).clone()
+
+        soft_objective = self._build_soft_objective_data(
+            benchmark,
+            plc,
+            best_hard.detach().cpu().to(torch.float32),
+            soft_movable_mask,
+        )
+
+        refined_soft = self._optimize_soft_macros(
+            benchmark,
+            soft_start,
+            soft_movable_mask,
+            soft_objective,
+        )
+
+        # Combine hard and soft placements and return the result
+        full_positions = self._pick_best_full_candidate(
+            [soft_start, refined_soft.detach().cpu()],
+            best_hard.detach().cpu(),
+            benchmark,
+            plc,
+        )
 
         return full_positions
+
 
     def _pick_best_candidate(self, candidates, benchmark: Benchmark, plc):
         """
@@ -282,6 +309,36 @@ class MOSAICPlacer:
                 best_hard = hard_pos
 
         return best_hard
+    
+    def _pick_best_full_candidate(self, soft_candidates, hard_pos: torch.Tensor, benchmark: Benchmark, plc):
+        """
+        Evaluates full placements after soft-macro refinement while keeping the hard
+        macros fixed at the chosen hard placement.
+        """
+        num_hard = benchmark.num_hard_macros
+        best_score = float("inf")
+        best_full = None
+        seen = set()
+
+        for soft_pos in soft_candidates:
+            key = tuple(torch.round(soft_pos.flatten(), decimals=4).tolist())
+            if key in seen:
+                continue
+            seen.add(key)
+
+            full = benchmark.macro_positions.clone()
+            full[:num_hard] = hard_pos.to(dtype=full.dtype)
+            full[num_hard:] = soft_pos.to(dtype=full.dtype)
+
+            proxy, overlaps = _exact_proxy_cost(plc, full, benchmark)
+            score = proxy if overlaps == 0 else proxy + 1000.0 * overlaps
+
+            if score < best_score:
+                best_score = score
+                best_full = full
+
+        return best_full
+
 
     def _build_objective_data(self, benchmark: Benchmark, plc, movable_mask: torch.Tensor):
         """
@@ -290,7 +347,7 @@ class MOSAICPlacer:
         one pin can move.
         Returns a dictionary of tensors used during optimization to evaluate the surrogate cost.
         """
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cpu")
         num_hard = benchmark.num_hard_macros
 
         # Map evaluator macro names back to benchmark hard-macro indices so we
@@ -459,6 +516,187 @@ class MOSAICPlacer:
             "conn_weights": torch.tensor(conn_weights, dtype=torch.float32, device=device),
             "fixed_density_area": density_fixed_area.to(torch.float32),
         }
+    
+    def _build_soft_objective_data(self, benchmark: Benchmark, plc, hard_pos: torch.Tensor, movable_mask: torch.Tensor):
+        """
+        Builds a differentiable objective for soft-macro-only refinement.
+        Hard macros are treated as fixed context; soft macros are the variables.
+        """
+        device = torch.device("cpu")
+        num_hard = benchmark.num_hard_macros
+
+        hard_pos = hard_pos.detach().to(torch.float32).to(device)
+        movable_mask = movable_mask.to(device)
+
+        hard_name_to_idx = {
+            plc.modules_w_pins[plc_idx].get_name(): hard_idx
+            for hard_idx, plc_idx in enumerate(plc.hard_macro_indices)
+        }
+        soft_name_to_idx = {
+            plc.modules_w_pins[plc_idx].get_name(): soft_idx
+            for soft_idx, plc_idx in enumerate(plc.soft_macro_indices)
+        }
+
+        soft_sizes = benchmark.macro_sizes[num_hard:].detach().to(torch.float32).to(device)
+        hard_sizes = benchmark.macro_sizes[:num_hard].detach().to(torch.float32).to(device)
+
+        grid_rows = int(benchmark.grid_rows)
+        grid_cols = int(benchmark.grid_cols)
+        
+        canvas_w = float(benchmark.canvas_width)
+        canvas_h = float(benchmark.canvas_height)
+        
+        grid_w = canvas_w / grid_cols
+        grid_h = canvas_h / grid_rows
+
+        row_centers = torch.arange(grid_rows, dtype=torch.float32, device=device) * grid_h + grid_h / 2
+        col_centers = torch.arange(grid_cols, dtype=torch.float32, device=device) * grid_w + grid_w / 2
+
+        row_idx = torch.arange(grid_rows, dtype=torch.float32, device=device)
+        col_idx = torch.arange(grid_cols, dtype=torch.float32, device=device)
+        grid_col, grid_row = torch.meshgrid(col_idx, row_idx, indexing="xy")
+
+        cell_xmin = (grid_col.flatten() * grid_w).to(torch.float32)
+        cell_xmax = cell_xmin + grid_w
+        
+        cell_ymin = (grid_row.flatten() * grid_h).to(torch.float32)
+        cell_ymax = cell_ymin + grid_h
+
+        pin_owner = []
+        pin_offset_x = []
+        pin_offset_y = []
+        pin_fixed_x = []
+        pin_fixed_y = []
+        pin_net_ids = []
+        net_weights = []
+
+        src_owner = []
+        src_offset_x = []
+        src_offset_y = []
+        src_fixed_x = []
+        src_fixed_y = []
+
+        sink_owner = []
+        sink_offset_x = []
+        sink_offset_y = []
+        sink_fixed_x = []
+        sink_fixed_y = []
+
+        conn_weights = []
+
+        active_net_id = 0
+        for driver_name, sinks in plc.nets.items():
+            driver_idx = plc.mod_name_to_indices[driver_name]
+            driver = plc.modules_w_pins[driver_idx]
+            weight = float(driver.get_weight()) if hasattr(driver, "get_weight") else 1.0
+            if weight <= 0:
+                weight = 1.0
+
+            pin_specs = [self._soft_pin_spec(driver_name, plc, hard_name_to_idx, soft_name_to_idx, hard_pos)]
+            pin_specs.extend(
+                self._soft_pin_spec(sink_name, plc, hard_name_to_idx, soft_name_to_idx, hard_pos)
+                for sink_name in sinks
+            )
+
+            if not any(spec["owner"] >= 0 and movable_mask[spec["owner"]] for spec in pin_specs):
+                continue
+
+            for spec in pin_specs:
+                pin_owner.append(spec["owner"])
+                pin_offset_x.append(spec["offset_x"])
+                pin_offset_y.append(spec["offset_y"])
+                pin_fixed_x.append(spec["fixed_x"])
+                pin_fixed_y.append(spec["fixed_y"])
+                pin_net_ids.append(active_net_id)
+
+            driver_spec = pin_specs[0]
+            for sink_spec in pin_specs[1:]:
+                if not (
+                    (driver_spec["owner"] >= 0 and movable_mask[driver_spec["owner"]])
+                    or (sink_spec["owner"] >= 0 and movable_mask[sink_spec["owner"]])
+                ):
+                    continue
+
+                src_owner.append(driver_spec["owner"])
+                src_offset_x.append(driver_spec["offset_x"])
+                src_offset_y.append(driver_spec["offset_y"])
+                src_fixed_x.append(driver_spec["fixed_x"])
+                src_fixed_y.append(driver_spec["fixed_y"])
+
+                sink_owner.append(sink_spec["owner"])
+                sink_offset_x.append(sink_spec["offset_x"])
+                sink_offset_y.append(sink_spec["offset_y"])
+                sink_fixed_x.append(sink_spec["fixed_x"])
+                sink_fixed_y.append(sink_spec["fixed_y"])
+                conn_weights.append(weight)
+
+            net_weights.append(weight)
+            active_net_id += 1
+
+        hard_fixed_area = self._fixed_macro_overlap_area(
+            hard_pos,
+            hard_sizes,
+            cell_xmin,
+            cell_xmax,
+            cell_ymin,
+            cell_ymax,
+        )
+
+        if (~movable_mask).any():
+            frozen_soft_pos = benchmark.macro_positions[num_hard:].detach().to(torch.float32).to(device)[~movable_mask]
+            frozen_soft_sizes = soft_sizes[~movable_mask]
+            frozen_soft_area = self._fixed_macro_overlap_area(
+                frozen_soft_pos,
+                frozen_soft_sizes,
+                cell_xmin,
+                cell_xmax,
+                cell_ymin,
+                cell_ymax,
+            )
+        else:
+            frozen_soft_area = torch.zeros_like(cell_xmin)
+
+        return {
+            "hard_sizes": soft_sizes,
+            "cell_xmin": cell_xmin,
+            "cell_xmax": cell_xmax,
+            "cell_ymin": cell_ymin,
+            "cell_ymax": cell_ymax,
+            "row_centers": row_centers,
+            "col_centers": col_centers,
+            "grid_rows": grid_rows,
+            "grid_cols": grid_cols,
+            "grid_w": float(grid_w),
+            "grid_h": float(grid_h),
+            "grid_area": float(grid_w * grid_h),
+            "cap_h": float(grid_h * benchmark.hroutes_per_micron),
+            "cap_v": float(grid_w * benchmark.vroutes_per_micron),
+            "hrouting_alloc": float(getattr(plc, "hrouting_alloc", 0.0)),
+            "vrouting_alloc": float(getattr(plc, "vrouting_alloc", 0.0)),
+            "smooth_range": int(getattr(plc, "smooth_range", 0)),
+            "pin_owner": torch.tensor(pin_owner, dtype=torch.long, device=device),
+            "pin_offset_x": torch.tensor(pin_offset_x, dtype=torch.float32, device=device),
+            "pin_offset_y": torch.tensor(pin_offset_y, dtype=torch.float32, device=device),
+            "pin_fixed_x": torch.tensor(pin_fixed_x, dtype=torch.float32, device=device),
+            "pin_fixed_y": torch.tensor(pin_fixed_y, dtype=torch.float32, device=device),
+            "pin_net_ids": torch.tensor(pin_net_ids, dtype=torch.long, device=device),
+            "net_weights": torch.tensor(net_weights, dtype=torch.float32, device=device),
+            "num_active_nets": active_net_id,
+            "plc_net_count": max(int(getattr(plc, "net_cnt", active_net_id)), 1),
+            "src_owner": torch.tensor(src_owner, dtype=torch.long, device=device),
+            "src_offset_x": torch.tensor(src_offset_x, dtype=torch.float32, device=device),
+            "src_offset_y": torch.tensor(src_offset_y, dtype=torch.float32, device=device),
+            "src_fixed_x": torch.tensor(src_fixed_x, dtype=torch.float32, device=device),
+            "src_fixed_y": torch.tensor(src_fixed_y, dtype=torch.float32, device=device),
+            "sink_owner": torch.tensor(sink_owner, dtype=torch.long, device=device),
+            "sink_offset_x": torch.tensor(sink_offset_x, dtype=torch.float32, device=device),
+            "sink_offset_y": torch.tensor(sink_offset_y, dtype=torch.float32, device=device),
+            "sink_fixed_x": torch.tensor(sink_fixed_x, dtype=torch.float32, device=device),
+            "sink_fixed_y": torch.tensor(sink_fixed_y, dtype=torch.float32, device=device),
+            "conn_weights": torch.tensor(conn_weights, dtype=torch.float32, device=device),
+            "fixed_density_area": (hard_fixed_area + frozen_soft_area).to(torch.float32),
+        }
+
 
     def _pin_spec(self, pin_name: str, plc, hard_name_to_idx: dict[str, int]):
         """
@@ -501,6 +739,7 @@ class MOSAICPlacer:
         parent_idx = plc.mod_name_to_indices[parent_name]
         parent = plc.modules_w_pins[parent_idx]
         px, py = parent.get_pos()
+        
         return {
             "owner": -1,
             "offset_x": 0.0,
@@ -508,6 +747,66 @@ class MOSAICPlacer:
             "fixed_x": float(px + offset_x),
             "fixed_y": float(py + offset_y),
         }
+        
+    def _soft_pin_spec(self, pin_name: str, plc, hard_name_to_idx: dict[str, int],
+                   soft_name_to_idx: dict[str, int], hard_pos: torch.Tensor):
+        """
+        For soft-stage optimization:
+        - soft-macro pins are encoded as (owner, offset),
+        - hard-macro pins are treated as fixed absolute points using the chosen hard placement,
+        - ports / other pins are fixed absolute points.
+        """
+        pin_idx = plc.mod_name_to_indices[pin_name]
+        pin = plc.modules_w_pins[pin_idx]
+
+        if pin.get_type() == "PORT":
+            x, y = pin.get_pos()
+            return {
+                "owner": -1,
+                "offset_x": 0.0,
+                "offset_y": 0.0,
+                "fixed_x": float(x),
+                "fixed_y": float(y),
+            }
+
+        parent_name = pin_name.split("/")[0]
+        if hasattr(pin, "get_offset"):
+            offset_x, offset_y = pin.get_offset()
+        else:
+            offset_x, offset_y = pin.x_offset, pin.y_offset
+
+        if parent_name in soft_name_to_idx:
+            return {
+                "owner": soft_name_to_idx[parent_name],
+                "offset_x": float(offset_x),
+                "offset_y": float(offset_y),
+                "fixed_x": 0.0,
+                "fixed_y": 0.0,
+            }
+
+        if parent_name in hard_name_to_idx:
+            hard_idx = hard_name_to_idx[parent_name]
+            px = float(hard_pos[hard_idx, 0].item())
+            py = float(hard_pos[hard_idx, 1].item())
+            return {
+                "owner": -1,
+                "offset_x": 0.0,
+                "offset_y": 0.0,
+                "fixed_x": float(px + offset_x),
+                "fixed_y": float(py + offset_y),
+            }
+
+        parent_idx = plc.mod_name_to_indices[parent_name]
+        parent = plc.modules_w_pins[parent_idx]
+        px, py = parent.get_pos()
+        return {
+            "owner": -1,
+            "offset_x": 0.0,
+            "offset_y": 0.0,
+            "fixed_x": float(px + offset_x),
+            "fixed_y": float(py + offset_y),
+        }
+
 
     def _fixed_macro_overlap_area(self, positions: torch.Tensor, sizes: torch.Tensor, cell_xmin: torch.Tensor,
                                   cell_xmax: torch.Tensor, cell_ymin: torch.Tensor, cell_ymax: torch.Tensor) -> torch.Tensor:
@@ -532,15 +831,15 @@ class MOSAICPlacer:
         
         return (overlap_x * overlap_y).sum(dim=0)
 
-    def _optimize_hard_macros( # TODO documentation
+    def _optimize_hard_macros(
         self, benchmark: Benchmark, hard_start: torch.Tensor,
         movable_mask: torch.Tensor, objective: dict) -> torch.Tensor:
 
         num_hard = benchmark.num_hard_macros
         sizes = benchmark.macro_sizes[:num_hard].detach().cpu().to(torch.float32)
 
-        # Optimize the hard-macro centers directly. Fixed macros are clamped
-        # back after every step.
+        # Optimize the hard-macro centers directly. 
+        # Fixed macros are clamped back after every step.
         param = hard_start.clone().to(torch.float32)
         param.requires_grad_(True)
 
@@ -548,8 +847,7 @@ class MOSAICPlacer:
         if movable_idx.numel() == 0:
             return hard_start
 
-        # The evaluator uses top-k averages for density/congestion; these tail
-        # variables act like learnable smooth thresholds for those upper tails.
+        # The evaluator uses top-k averages for density/congestion.
         density_tail = torch.nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         congestion_tail = torch.nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         optimizer = torch.optim.Adam([param, density_tail, congestion_tail], lr=self.learning_rate)
@@ -602,6 +900,70 @@ class MOSAICPlacer:
                     best_param = hard_pos.detach().clone()
 
         return best_param
+    
+    def _optimize_soft_macros(self, benchmark: Benchmark, soft_start: torch.Tensor,
+                          movable_mask: torch.Tensor, objective: dict) -> torch.Tensor:
+        """
+        Refines only the soft macros while holding hard macros fixed.
+        Reuses the same differentiable wirelength / density / congestion surrogates.
+        """
+        device = objective["hard_sizes"].device
+        num_hard = benchmark.num_hard_macros
+        sizes = benchmark.macro_sizes[num_hard:].detach().to(torch.float32).to(device)
+
+        soft_start = soft_start.clone().to(torch.float32).to(device)
+        movable_mask = movable_mask.to(device)
+
+        param = soft_start.clone()
+        param.requires_grad_(True)
+
+        movable_idx = torch.where(movable_mask)[0]
+        if movable_idx.numel() == 0:
+            return soft_start.detach().cpu()
+
+        density_tail = torch.nn.Parameter(torch.tensor(0.5, dtype=torch.float32, device=device))
+        congestion_tail = torch.nn.Parameter(torch.tensor(0.5, dtype=torch.float32, device=device))
+        optimizer = torch.optim.Adam([param, density_tail, congestion_tail], lr=self.soft_learning_rate)
+
+        x_lo = sizes[:, 0] / 2
+        x_hi = float(benchmark.canvas_width) - sizes[:, 0] / 2
+        y_lo = sizes[:, 1] / 2
+        y_hi = float(benchmark.canvas_height) - sizes[:, 1] / 2
+
+        best_param = soft_start.detach().clone()
+        best_score = float("inf")
+
+        for _ in range(self.soft_iterations):
+            optimizer.zero_grad()
+
+            soft_pos = soft_start.clone()
+            soft_pos[movable_idx] = param[movable_idx]
+
+            wire = self._wirelength_cost(soft_pos, objective)
+            density = self._density_cost(soft_pos, objective, density_tail)
+            congestion = self._congestion_cost(soft_pos, objective, congestion_tail)
+
+            loss = (
+                PROXY_WEIGHTS["wirelength"] * wire
+                + PROXY_WEIGHTS["density"] * density
+                + PROXY_WEIGHTS["congestion"] * congestion
+            )
+
+            loss.backward()
+            optimizer.step()
+
+            with torch.no_grad():
+                param[:, 0].clamp_(x_lo, x_hi)
+                param[:, 1].clamp_(y_lo, y_hi)
+                param[~movable_mask] = soft_start[~movable_mask]
+
+                score = float(loss.detach())
+                if score < best_score:
+                    best_score = score
+                    best_param = soft_pos.detach().clone()
+
+        return best_param.detach().cpu()
+
 
     def _resolve_pin_coordinates(self, hard_pos: torch.Tensor, owner: torch.Tensor, offset_x: torch.Tensor,
                                  offset_y: torch.Tensor, fixed_x: torch.Tensor, fixed_y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -934,9 +1296,8 @@ class MOSAICPlacer:
                             if clash.any():
                                 continue
 
-                        # Among all legal candidates on the current search
-                        # frontier, keep the one with minimum displacement from
-                        # the pre-legalization position.
+                        # Keep the legal candidate with minimum displacement 
+                        # from the pre-legalization position.
                         dist = (cand_x - positions[idx, 0]) ** 2 + (cand_y - positions[idx, 1]) ** 2
                         if dist < best_dist:
                             best_dist = dist

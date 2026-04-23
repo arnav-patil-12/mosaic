@@ -1,384 +1,251 @@
-Benchmark: ibm01
-Canvas Dimensions: 22.95 um x 23.04 um
-Total Macros: 1140
-	Hard Macros: 246
-	Soft Macros: 894
-Total Nets: 7269
-Canvas Area: 528.77 um^2
-Area Utilization: 80.02%
+================================================================================
+evaluate · MOSAICPlacer  (submissions/mosaic/placer.py)
+================================================================================
 
-Hard Macro Stats:
-	Average Area: 0.92 um^2
-	Min Area: 0.81 um^2
-	Max Area: 26.92 um^2
-	Total Area: 226.26 um^2
-
-Soft Macro Stats:
-	Average Area: 0.22 um^2
-	Min Area: 0.00 um^2
-	Max Area: 0.95 um^2
-	Total Area: 196.88 um^2
-
-Benchmark: ibm02
-Canvas Dimensions: 32.56 um x 32.48 um
-Total Macros: 1346
-	Hard Macros: 271
-	Soft Macros: 1075
-Total Nets: 10944
-Canvas Area: 1057.55 um^2
-Area Utilization: 80.02%
-
-Hard Macro Stats:
-	Average Area: 2.16 um^2
-	Min Area: 0.77 um^2
-	Max Area: 96.17 um^2
-	Total Area: 585.20 um^2
-
-Soft Macro Stats:
-	Average Area: 0.24 um^2
-	Min Area: 0.01 um^2
-	Max Area: 0.93 um^2
-	Total Area: 261.08 um^2
-
-Benchmark: ibm03
-Canvas Dimensions: 35.12 um x 35.04 um
-Total Macros: 1438
-	Hard Macros: 290
-	Soft Macros: 1148
-Total Nets: 10247
-Canvas Area: 1230.60 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 2.12 um^2
-	Min Area: 0.77 um^2
-	Max Area: 105.88 um^2
-	Total Area: 614.98 um^2
-
-Soft Macro Stats:
-	Average Area: 0.32 um^2
-	Min Area: 0.00 um^2
-	Max Area: 1.66 um^2
-	Total Area: 369.66 um^2
-
-Benchmark: ibm04
-Canvas Dimensions: 34.09 um x 34.08 um
-Total Macros: 1380
-	Hard Macros: 295
-	Soft Macros: 1085
-Total Nets: 13555
-Canvas Area: 1161.79 um^2
-Area Utilization: 80.02%
-
-Hard Macro Stats:
-	Average Area: 1.65 um^2
-	Min Area: 0.77 um^2
-	Max Area: 85.12 um^2
-	Total Area: 487.90 um^2
-
-Soft Macro Stats:
-	Average Area: 0.41 um^2
-	Min Area: 0.00 um^2
-	Max Area: 4.07 um^2
-	Total Area: 441.80 um^2
-
-Benchmark: ibm06
-Canvas Dimensions: 32.65 um x 32.64 um
-Total Macros: 1078
-	Hard Macros: 178
-	Soft Macros: 900
-Total Nets: 14085
-Canvas Area: 1065.70 um^2
-Area Utilization: 80.00%
-
-Hard Macro Stats:
-	Average Area: 2.72 um^2
-	Min Area: 0.56 um^2
-	Max Area: 116.35 um^2
-	Total Area: 483.89 um^2
-
-Soft Macro Stats:
-	Average Area: 0.41 um^2
-	Min Area: 0.00 um^2
-	Max Area: 1.61 um^2
-	Total Area: 368.72 um^2
-
-Benchmark: ibm07
-Canvas Dimensions: 38.51 um x 38.40 um
-Total Macros: 1331
-	Hard Macros: 291
-	Soft Macros: 1040
-Total Nets: 19920
-Canvas Area: 1478.78 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 1.83 um^2
-	Min Area: 0.77 um^2
-	Max Area: 56.22 um^2
-	Total Area: 531.51 um^2
-
-Soft Macro Stats:
-	Average Area: 0.63 um^2
-	Min Area: 0.00 um^2
-	Max Area: 3.49 um^2
-	Total Area: 651.63 um^2
-
-Benchmark: ibm08
-Canvas Dimensions: 41.05 um x 40.96 um
-Total Macros: 1331
-	Hard Macros: 301
-	Soft Macros: 1030
-Total Nets: 20694
-Canvas Area: 1681.41 um^2
-Area Utilization: 80.00%
-
-Hard Macro Stats:
-	Average Area: 2.30 um^2
-	Min Area: 0.77 um^2
-	Max Area: 162.80 um^2
-	Total Area: 692.83 um^2
-
-Soft Macro Stats:
-	Average Area: 0.63 um^2
-	Min Area: 0.00 um^2
-	Max Area: 4.53 um^2
-	Total Area: 652.28 um^2
-
-Benchmark: ibm09
-Canvas Dimensions: 46.74 um x 46.88 um
-Total Macros: 1301
-	Hard Macros: 253
-	Soft Macros: 1048
-Total Nets: 18341
-Canvas Area: 2191.17 um^2
-Area Utilization: 80.00%
-
-Hard Macro Stats:
-	Average Area: 3.45 um^2
-	Min Area: 0.77 um^2
-	Max Area: 95.09 um^2
-	Total Area: 872.55 um^2
-
-Soft Macro Stats:
-	Average Area: 0.84 um^2
-	Min Area: 0.00 um^2
-	Max Area: 4.13 um^2
-	Total Area: 880.34 um^2
-
-Benchmark: ibm10
-Canvas Dimensions: 77.05 um x 77.12 um
-Total Macros: 2768
-	Hard Macros: 786
-	Soft Macros: 1982
-Total Nets: 39140
-Canvas Area: 5942.10 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 4.51 um^2
-	Min Area: 0.81 um^2
-	Max Area: 228.21 um^2
-	Total Area: 3545.40 um^2
-
-Soft Macro Stats:
-	Average Area: 0.61 um^2
-	Min Area: 0.00 um^2
-	Max Area: 3.50 um^2
-	Total Area: 1208.86 um^2
-
-Benchmark: ibm11
-Canvas Dimensions: 51.53 um x 51.52 um
-Total Macros: 1568
-	Hard Macros: 373
-	Soft Macros: 1195
-Total Nets: 25273
-Canvas Area: 2654.83 um^2
-Area Utilization: 80.00%
-
-Hard Macro Stats:
-	Average Area: 2.68 um^2
-	Min Area: 0.77 um^2
-	Max Area: 95.08 um^2
-	Total Area: 999.35 um^2
-
-Soft Macro Stats:
-	Average Area: 0.94 um^2
-	Min Area: 0.00 um^2
-	Max Area: 4.53 um^2
-	Total Area: 1124.53 um^2
-
-Benchmark: ibm12
-Canvas Dimensions: 67.97 um x 68.00 um
-Total Macros: 2636
-	Hard Macros: 651
-	Soft Macros: 1985
-Total Nets: 40996
-Canvas Area: 4621.96 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 3.67 um^2
-	Min Area: 0.81 um^2
-	Max Area: 237.65 um^2
-	Total Area: 2387.62 um^2
-
-Soft Macro Stats:
-	Average Area: 0.66 um^2
-	Min Area: 0.00 um^2
-	Max Area: 5.88 um^2
-	Total Area: 1310.34 um^2
-
-Benchmark: ibm13
-Canvas Dimensions: 55.94 um x 56.00 um
-Total Macros: 1725
-	Hard Macros: 424
-	Soft Macros: 1301
-Total Nets: 28201
-Canvas Area: 3132.64 um^2
-Area Utilization: 80.02%
-
-Hard Macro Stats:
-	Average Area: 2.67 um^2
-	Min Area: 0.77 um^2
-	Max Area: 105.92 um^2
-	Total Area: 1133.86 um^2
-
-Soft Macro Stats:
-	Average Area: 1.06 um^2
-	Min Area: 0.00 um^2
-	Max Area: 10.39 um^2
-	Total Area: 1372.81 um^2
-
-Benchmark: ibm14
-Canvas Dimensions: 59.85 um x 60.00 um
-Total Macros: 2143
-	Hard Macros: 614
-	Soft Macros: 1529
-Total Nets: 57333
-Canvas Area: 3591.00 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 1.15 um^2
-	Min Area: 0.46 um^2
-	Max Area: 57.18 um^2
-	Total Area: 705.67 um^2
-
-Soft Macro Stats:
-	Average Area: 1.42 um^2
-	Min Area: 0.00 um^2
-	Max Area: 9.33 um^2
-	Total Area: 2167.40 um^2
-
-Benchmark: ibm15
-Canvas Dimensions: 67.64 um x 67.52 um
-Total Macros: 1531
-	Hard Macros: 393
-	Soft Macros: 1138
-Total Nets: 46467
-Canvas Area: 4567.05 um^2
-Area Utilization: 80.00%
-
-Hard Macro Stats:
-	Average Area: 3.11 um^2
-	Min Area: 0.77 um^2
-	Max Area: 401.86 um^2
-	Total Area: 1221.61 um^2
-
-Soft Macro Stats:
-	Average Area: 2.14 um^2
-	Min Area: 0.00 um^2
-	Max Area: 8.87 um^2
-	Total Area: 2432.21 um^2
-
-Benchmark: ibm16
-Canvas Dimensions: 81.03 um x 81.12 um
-Total Macros: 1773
-	Hard Macros: 458
-	Soft Macros: 1315
-Total Nets: 67118
-Canvas Area: 6573.15 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 5.44 um^2
-	Min Area: 0.81 um^2
-	Max Area: 99.53 um^2
-	Total Area: 2490.82 um^2
-
-Soft Macro Stats:
-	Average Area: 2.11 um^2
-	Min Area: 0.00 um^2
-	Max Area: 6.79 um^2
-	Total Area: 2768.23 um^2
-
-Benchmark: ibm17
-Canvas Dimensions: 72.60 um x 72.64 um
-Total Macros: 2604
-	Hard Macros: 760
-	Soft Macros: 1844
-Total Nets: 83132
-Canvas Area: 5273.66 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 1.19 um^2
-	Min Area: 0.81 um^2
-	Max Area: 39.83 um^2
-	Total Area: 907.46 um^2
-
-Soft Macro Stats:
-	Average Area: 1.80 um^2
-	Min Area: 0.00 um^2
-	Max Area: 7.55 um^2
-	Total Area: 3311.88 um^2
-
-Benchmark: ibm18
-Canvas Dimensions: 64.82 um x 64.96 um
-Total Macros: 1314
-	Hard Macros: 285
-	Soft Macros: 1029
-Total Nets: 53763
-Canvas Area: 4210.71 um^2
-Area Utilization: 80.01%
-
-Hard Macro Stats:
-	Average Area: 1.28 um^2
-	Min Area: 0.77 um^2
-	Max Area: 32.48 um^2
-	Total Area: 366.13 um^2
-
-Soft Macro Stats:
-	Average Area: 2.92 um^2
-	Min Area: 0.00 um^2
-	Max Area: 7.79 um^2
-	Total Area: 3002.66 um^2
-
+  ibm01... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm01/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 45, Row: 41
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm01/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 45, Row: 41
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=0.9371  (wl=0.066 den=0.601 cong=1.142)  VALID  [9.12s]
+  ibm02... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm02/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 30, Row: 27
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm02/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 30, Row: 27
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.5194  (wl=0.070 den=0.686 cong=2.213)  VALID  [20.04s]
+  ibm03... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm03/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 32, Row: 29
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm03/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 32, Row: 29
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.2057  (wl=0.076 den=0.572 cong=1.687)  VALID  [13.46s]
+  ibm04... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm04/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 31, Row: 30
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm04/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 31, Row: 30
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.1836  (wl=0.069 den=0.607 cong=1.622)  VALID  [18.89s]
+  ibm06... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm06/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 31, Row: 28
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm06/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 31, Row: 28
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.5477  (wl=0.060 den=0.612 cong=2.364)  VALID  [21.13s]
+  ibm07... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm07/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 35, Row: 32
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm07/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 35, Row: 32
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.3425  (wl=0.063 den=0.602 cong=1.957)  VALID  [34.37s]
+  ibm08... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm08/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 38, Row: 34
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm08/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 38, Row: 34
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.3906  (wl=0.069 den=0.648 cong=1.995)  VALID  [41.28s]
+  ibm09... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm09/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 36, Row: 38
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm09/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 36, Row: 38
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=0.9821  (wl=0.054 den=0.611 cong=1.244)  VALID  [27.42s]
+  ibm10... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm10/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 55, Row: 41
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm10/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 55, Row: 41
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.2584  (wl=0.065 den=0.574 cong=1.814)  VALID  [137.58s]
+  ibm11... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm11/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 39, Row: 45
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm11/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 39, Row: 45
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.0765  (wl=0.052 den=0.625 cong=1.423)  VALID  [43.97s]
+  ibm12... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm12/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 47, Row: 47
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm12/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 47, Row: 47
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.5139  (wl=0.058 den=0.603 cong=2.309)  VALID  [151.15s]
+  ibm13... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm13/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 43, Row: 43
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm13/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 43, Row: 43
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.2089  (wl=0.052 den=0.611 cong=1.703)  VALID  [63.43s]
+  ibm14... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm14/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 49, Row: 44
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm14/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 49, Row: 44
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.4312  (wl=0.052 den=0.645 cong=2.114)  VALID  [177.58s]
+  ibm15... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm15/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 57, Row: 38
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm15/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 57, Row: 38
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.4475  (wl=0.057 den=0.628 cong=2.152)  VALID  [106.90s]
+  ibm16... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm16/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 45, Row: 48
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm16/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 45, Row: 48
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.3715  (wl=0.048 den=0.613 cong=2.033)  VALID  [210.06s]
+  ibm17... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm17/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 51, Row: 44
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm17/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 51, Row: 44
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.5813  (wl=0.053 den=0.623 cong=2.433)  VALID  [347.81s]
+  ibm18... #[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm18/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 55, Row: 39
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+#[INFO] Reading from external/MacroPlacement/Testcases/ICCAD04/ibm18/netlist.pb.txt
+[INFO] Retrieving Meta information from .plc comments
+#[PLACEMENT GRID] Col: 55, Row: 39
+#[ROUTES PER MICRON] Hor: 65.96, Ver: 106.96
+#[CONGESTION SMOOTH RANGE] Smooth Range: 2
+#[OVERLAP THRESHOLD] Threshold: 0.0040
+proxy=1.6545  (wl=0.054 den=0.700 cong=2.501)  VALID  [120.27s]
 
 --------------------------------------------------------------------------------
     Benchmark     Proxy        SA   RePlAce     vs SA  vs RePlAce  Overlaps
 --------------------------------------------------------------------------------
-        ibm01    1.0385    1.3166    0.9976    +21.1%       -4.1%        69
-        ibm02    1.5658    1.9072    1.8370    +17.9%      +14.8%       108
-        ibm03    1.3255    1.7401    1.3222    +23.8%       -0.2%        61
-        ibm04    1.3133    1.5037    1.3024    +12.7%       -0.8%        68
-        ibm06    1.6577    2.5057    1.6187    +33.8%       -2.4%        47
-        ibm07    1.4758    2.0229    1.4633    +27.0%       -0.9%        82
-        ibm08    1.4664    1.9239    1.4285    +23.8%       -2.7%        86
-        ibm09    1.1126    1.3875    1.1194    +19.8%       +0.6%       101
-        ibm10    1.3397    2.1108    1.5009    +36.5%      +10.7%        74
-        ibm11    1.2141    1.7111    1.1774    +29.0%       -3.1%       129
-        ibm12    1.6251    2.8261    1.7261    +42.5%       +5.9%       187
-        ibm13    1.3854    1.9141    1.3355    +27.6%       -3.7%       180
-        ibm14    1.5938    2.2750    1.5436    +29.9%       -3.3%       189
-        ibm15    1.6033    2.3000    1.5159    +30.3%       -5.8%       165
-        ibm16    1.4911    2.2337    1.4780    +33.2%       -0.9%        86
-        ibm17    1.7392    3.6726    1.6446    +52.6%       -5.7%       231
-        ibm18    1.7899    2.7755    1.7722    +35.5%       -1.0%        76
+        ibm01    0.9371    1.3166    0.9976    +28.8%       +6.1%         0
+        ibm02    1.5194    1.9072    1.8370    +20.3%      +17.3%         0
+        ibm03    1.2057    1.7401    1.3222    +30.7%       +8.8%         0
+        ibm04    1.1836    1.5037    1.3024    +21.3%       +9.1%         0
+        ibm06    1.5477    2.5057    1.6187    +38.2%       +4.4%         0
+        ibm07    1.3425    2.0229    1.4633    +33.6%       +8.3%         0
+        ibm08    1.3906    1.9239    1.4285    +27.7%       +2.7%         0
+        ibm09    0.9821    1.3875    1.1194    +29.2%      +12.3%         0
+        ibm10    1.2584    2.1108    1.5009    +40.4%      +16.2%         0
+        ibm11    1.0765    1.7111    1.1774    +37.1%       +8.6%         0
+        ibm12    1.5139    2.8261    1.7261    +46.4%      +12.3%         0
+        ibm13    1.2089    1.9141    1.3355    +36.8%       +9.5%         0
+        ibm14    1.4312    2.2750    1.5436    +37.1%       +7.3%         0
+        ibm15    1.4475    2.3000    1.5159    +37.1%       +4.5%         0
+        ibm16    1.3715    2.2337    1.4780    +38.6%       +7.2%         0
+        ibm17    1.5813    3.6726    1.6446    +56.9%       +3.9%         0
+        ibm18    1.6545    2.7755    1.7722    +40.4%       +6.6%         0
 --------------------------------------------------------------------------------
-          AVG    1.4551    2.1251    1.4578    +31.5%       +0.2%      1939
+          AVG    1.3325    2.1251    1.4578    +37.3%       +8.6%         0
 
-Total runtime: 0.01s
-⚠  DISQUALIFIED: 1939 total overlaps across benchmarks
+Total runtime: 1544.46s
 
